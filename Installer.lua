@@ -1,78 +1,101 @@
 local component = require("component")
+local computer = require("computer")
 local filesystem = require("filesystem")
-local internet = require("internet")
 
-local BASE = "https://raw.githubusercontent.com/deragena/MineGOOS/main/"
+local SETUP_STAGE = "/MineGOOS/.setup_stage"
 
-local files = {
-  "init.lua",
-  "System/Core.lua",
-  "System/LanguageManager.lua",
-  "System/FirstSetup.lua",
-  "System/WindowManager.lua",
-  "System/Desktop.lua",
-  "Libraries/GUI.lua",
-  "Libraries/Window.lua",
-  "Store/catalog.lua",
-  "Games/UploadLabs/launcher.lua"
-}
+local function getStage()
+    local file = io.open(SETUP_STAGE, "r")
 
-print("================================")
-print("       MineGOOS Installer")
-print("================================")
-print("")
-print("GitHub: deragena/MineGOOS")
-print("")
+    if not file then
+        return 1
+    end
 
-local function downloadFile(path)
-  local url = BASE .. path
+    local data = file:read("*a")
+    file:close()
 
-  print("Downloading " .. path)
-
-  local handle, reason = internet.request(url)
-
-  if not handle then
-    print("ERROR: " .. tostring(reason))
-    return false
-  end
-
-  local directory = filesystem.path("/MineGOOS/" .. path)
-
-  if directory then
-    filesystem.makeDirectory(directory)
-  end
-
-  local file, err = io.open("/MineGOOS/" .. path, "w")
-
-  if not file then
-    print("ERROR: " .. tostring(err))
-    return false
-  end
-
-  for chunk in handle do
-    file:write(chunk)
-  end
-
-  file:close()
-
-  print("OK")
-  return true
+    return tonumber(data) or 1
 end
 
-filesystem.makeDirectory("/MineGOOS")
+local function setStage(stage)
+    filesystem.makeDirectory("/MineGOOS")
 
-for _, path in ipairs(files) do
-  if not downloadFile(path) then
-    print("")
-    print("Installation failed.")
-    return
-  end
+    local file = io.open(SETUP_STAGE, "w")
+
+    if file then
+        file:write(tostring(stage))
+        file:close()
+    end
 end
 
-print("")
-print("================================")
-print("     MineGOOS installed!")
-print("================================")
-print("")
-print("Start with:")
-print("lua /MineGOOS/init.lua")
+local function reboot()
+    computer.shutdown(true)
+end
+
+local stage = getStage()
+
+-- 1 → Выбор языка
+if stage == 1 then
+
+    local language = dofile("/MineGOOS/Installer/language.lua")
+
+    local file = io.open("/MineGOOS/.language", "w")
+
+    if file then
+        file:write(language)
+        file:close()
+    end
+
+    setStage(2)
+
+    reboot()
+
+-- 2 → Установка системы
+elseif stage == 2 then
+
+    local ok = dofile("/MineGOOS/Installer/install.lua")
+
+    if ok then
+        setStage(3)
+        reboot()
+    end
+
+-- 3 → Финал установки
+elseif stage == 3 then
+
+    dofile("/MineGOOS/Installer/final.lua")
+
+    setStage(4)
+
+-- 4 → Имя пользователя и пароль
+elseif stage == 4 then
+
+    dofile("/MineGOOS/Installer/profile.lua")
+
+    setStage(5)
+
+-- 5 → Подтверждение
+elseif stage == 5 then
+
+    local ok = dofile("/MineGOOS/Installer/confirm.lua")
+
+    if ok then
+        setStage(6)
+        reboot()
+    end
+
+-- 6 → Финальная перезагрузка
+elseif stage == 6 then
+
+    setStage(7)
+
+    reboot()
+
+-- 7 → Запуск MineGOOS
+elseif stage == 7 then
+
+    filesystem.remove(SETUP_STAGE)
+
+    dofile("/MineGOOS/init.lua")
+
+end
