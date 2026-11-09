@@ -1,0 +1,20 @@
+{
+  "name": "MineGOOS App Store",
+  "api_version": "1.0",
+  "apps": [
+    {
+      "id": "poker",
+      "name": "Poker",
+      "version": "1.0.0",
+      "description": "Poker game",
+      "package": "Store/apps/poker.lua"
+    },
+    {
+      "id": "text-editor",
+      "name": "Text Editor",
+      "version": "1.0.0",
+      "description": "Simple text editor",
+      "package": "Store/apps/text-editor.lua"
+    }
+  ]
+}

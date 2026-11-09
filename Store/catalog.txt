@@ -1,0 +1,2 @@
+poker|poker.mgapp|Store/packages/poker.mgapp
+text-editor|text-editor.mgapp|Store/packages/text-editor.mgapp

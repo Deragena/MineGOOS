@@ -1,0 +1,7 @@
+local ok, err = pcall(function()
+    dofile("/MineGOOS/Installer/interface.lua")
+end)
+
+if not ok then
+    io.stderr:write("MineGOOS Installer Error: " .. tostring(err) .. "\n")
+end
