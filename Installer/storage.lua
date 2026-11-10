@@ -41,7 +41,7 @@ function Storage.choose()
   if #disks == 0 then
     gpu.setBackground(0x100D1C)
     gpu.setForeground(0xFF6666)
-    gpu.fill(1, 1, gpu.getResolution(), 5, " ")
+    gpu.fill(1, 1, select(1, gpu.getResolution()), select(2, gpu.getResolution()), " ")
     gpu.set(2, 2, "No suitable installation disk found.")
     event.pull("key_down")
     return nil
