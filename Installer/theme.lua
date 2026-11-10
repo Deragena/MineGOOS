@@ -3,7 +3,7 @@ local gpu = component.gpu
 
 local Theme = {
   background = 0x11101C,
-  panel = 0x211B35,
+  panelBg = 0x211B35,
   purple = 0x9B6DFF,
   blue = 0x536DFF,
   white = 0xFFFFFF,
@@ -19,7 +19,7 @@ function Theme.clear()
 end
 
 function Theme.header(title, subtitle)
-  local w = gpu.getResolution()
+  local w, h = gpu.getResolution()
   gpu.setBackground(Theme.background)
   gpu.setForeground(Theme.purple)
   gpu.set(2, 2, "MINEGOOS INSTALLER")
@@ -28,27 +28,26 @@ function Theme.header(title, subtitle)
   gpu.setForeground(Theme.muted)
   gpu.set(2, 5, subtitle)
   gpu.setForeground(Theme.blue)
-  gpu.fill(2, 7, w - 2, 1, "━")
+  gpu.fill(2, 7, math.max(1, w - 4), 1, " ")
 end
 
 function Theme.panel(x, y, width, height)
-  gpu.setBackground(Theme.panel)
+  gpu.setBackground(Theme.panelBg)
   gpu.fill(x, y, width, height, " ")
 end
 
 function Theme.button(x, y, width, label, active)
-  gpu.setBackground(active and Theme.purple or Theme.panel)
+  gpu.setBackground(active and Theme.purple or Theme.panelBg)
   gpu.setForeground(Theme.white)
   gpu.fill(x, y, width, 3, " ")
   gpu.set(x + 2, y + 1, label)
 end
 
 function Theme.progress(step, total)
-  local w = gpu.getResolution()
+  local w, h = gpu.getResolution()
   local width = math.min(w - 4, 40)
   local filled = math.floor(width * step / total)
-
-  gpu.setBackground(Theme.panel)
+  gpu.setBackground(Theme.panelBg)
   gpu.fill(2, 8, width, 1, " ")
   gpu.setBackground(Theme.purple)
   if filled > 0 then
