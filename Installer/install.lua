@@ -12,7 +12,6 @@ local Storage = dofile("/MineGOOS/Installer/storage.lua")
 local files = {
   "init.lua",
   "BIOS/post.lua",
-  "BIOS/post.lua",
   "Installer.lua",
   "Boot/boot.lua",
   "Installer/confirm.lua",
