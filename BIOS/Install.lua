@@ -76,7 +76,7 @@ end
 local written, writeError = selectedFS.write(backup, oldCode)
 selectedFS.close(backup)
 
-if written == false then
+if not written then
     error("Backup write failed: " .. tostring(writeError))
 end
 
