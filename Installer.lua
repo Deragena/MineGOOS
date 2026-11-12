@@ -2,6 +2,7 @@
 local component = require("component")
 local filesystem = require("filesystem")
 local internet = require("internet")
+local event = require("event")
 
 local BASE = "https://raw.githubusercontent.com/Deragena/MineGOOS/main/"
 local ROOT = "/MineGOOS/"
@@ -10,10 +11,9 @@ local files = {
   "init.lua",
   "check_account.lua",
 
-  "BIOS/bios.lua",
-  "BIOS/eeprom.lua",
   "BIOS/post.lua",
-  "BIOS/prepare.lua",
+  "BIOS/Download.lua",
+  "BIOS/Install.lua",
 
   "Boot/boot.lua",
 
@@ -114,6 +114,36 @@ local function status(line, message)
   gpu.set(2, line, tostring(message):sub(1, w - 3))
 end
 
+local function biosMenu()
+  while true do
+    gpu.setBackground(0x100020)
+    gpu.setForeground(0xFFFFFF)
+    gpu.fill(1, 1, w, h, " ")
+
+    status(2, "MINEGOOS SETUP")
+    status(5, "1 - Install MineGOOS")
+    status(7, "2 - Download BIOS")
+    status(9, "3 - Install BIOS")
+    status(12, "Press 1, 2 or 3. ESC - exit.")
+
+    local _, _, char = event.pull("key_down")
+
+    if char == 49 then
+      local UI = dofile(ROOT .. "Installer/interface.lua")
+      UI.run()
+      return
+    elseif char == 50 then
+      local ok, err = pcall(dofile, ROOT .. "BIOS/Download.lua")
+      if not ok then status(15, "BIOS download error: " .. tostring(err)) end
+    elseif char == 51 then
+      local ok, err = pcall(dofile, ROOT .. "BIOS/Install.lua")
+      if not ok then status(15, "BIOS install error: " .. tostring(err)) end
+    elseif char == 27 then
+      return
+    end
+  end
+end
+
 local function main()
   if not component.isAvailable("internet") then
     error("Internet Card not found!")
@@ -148,7 +178,7 @@ local function main()
 
   os.sleep(1)
 
-  dofile(ROOT .. "Installer/interface.lua").run()
+  biosMenu()
 end
 
 local ok, err = xpcall(main, debug.traceback)
