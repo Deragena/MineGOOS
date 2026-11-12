@@ -1,33 +1,41 @@
+-- MineGOOS EEPROM Bootloader
 local component = require("component")
-local computer = require("computer")
 
-local eeprom = component.proxy(component.list("eeprom")())
-local fs = component.proxy(component.list("filesystem")())
-
-local bootAddress = nil
+local selected = nil
 
 for address in component.list("filesystem") do
-    local drive = component.proxy(address)
-    if drive.exists("/BIOS/bios.lua") then
-        bootAddress = address
+    local fs = component.proxy(address)
+
+    if fs.exists("/BIOS/bios.lua") and fs.exists("/Boot/boot.lua") then
+        selected = fs
         break
     end
 end
 
-if not bootAddress then
-    error("MineGOOS BIOS not found")
+if not selected then
+    error("MineGOOS: BIOS or Bootloader not found")
 end
 
-local drive = component.proxy(bootAddress)
-local file = drive.open("/BIOS/bios.lua", "r")
-local code = ""
+local handle, err = selected.open("/BIOS/bios.lua", "r")
+if not handle then
+    error("Cannot open BIOS: " .. tostring(err))
+end
+
+local chunks = {}
 
 while true do
-    local chunk = drive.read(file, math.huge)
-    if not chunk then break end
-    code = code .. chunk
+    local data = selected.read(handle, 4096)
+    if not data then break end
+    chunks[#chunks + 1] = data
 end
 
-drive.close(file)
+selected.close(handle)
 
-return assert(load(code, "=MineGOOS BIOS"))()
+local code = table.concat(chunks)
+local bios, loadError = load(code, "=MineGOOS BIOS")
+
+if not bios then
+    error(loadError)
+end
+
+return bios()
