@@ -10,86 +10,92 @@ function Window.create(title, x, y, width, height)
     y = y or 2,
     width = width or 30,
     height = height or 12,
+
     visible = true,
+    minimized = false,
     dragging = false,
+
     dragX = 0,
     dragY = 0,
+
     background = 0x171326,
     foreground = 0xFFFFFF,
-    titleColor = 0x985CFF
+    titleColor = 0x59328A
   }
 
   function win:draw()
-    if not self.visible then return end
+    if not self.visible or self.minimized then return end
 
-    local w, h = gpu.getResolution()
+    local sw, sh = gpu.getResolution()
 
-    local x1 = math.max(1, self.x)
-    local y1 = math.max(1, self.y)
-    local x2 = math.min(w, self.x + self.width - 1)
-    local y2 = math.min(h, self.y + self.height - 1)
+    self.width = math.min(self.width, sw)
+    self.height = math.min(self.height, sh - 1)
 
-    if x1 > x2 or y1 > y2 then return end
+    self.x = math.max(1, math.min(self.x, sw - self.width + 1))
+    self.y = math.max(1, math.min(self.y, sh - self.height))
 
     gpu.setBackground(self.background)
     gpu.setForeground(self.foreground)
-    gpu.fill(x1, y1, x2 - x1 + 1, y2 - y1 + 1, " ")
+
+    gpu.fill(
+      self.x,
+      self.y,
+      self.width,
+      self.height,
+      " "
+    )
 
     gpu.setBackground(self.titleColor)
+    gpu.fill(self.x, self.y, self.width, 1, " ")
+
     gpu.setForeground(0xFFFFFF)
-    gpu.fill(x1, y1, x2 - x1 + 1, 1, " ")
 
     local title = " " .. self.title
-    gpu.set(x1, y1, title:sub(1, math.max(1, x2 - x1 - 3)))
+    gpu.set(self.x, self.y, title:sub(1, self.width - 7))
 
-    if x2 - x1 >= 2 then
-      gpu.set(x2 - 1, y1, "X")
-    end
+    gpu.set(self.x + self.width - 5, self.y, "_")
+    gpu.set(self.x + self.width - 2, self.y, "X")
 
     gpu.setBackground(self.background)
     gpu.setForeground(self.foreground)
 
-    if y2 - y1 >= 2 then
-      gpu.set(x1, y2, string.rep("-", x2 - x1 + 1))
-    end
-  end
-
-  function win:close()
-    self.visible = false
-  end
-
-  function win:show()
-    self.visible = true
-    self:draw()
-  end
-
-  function win:move(newX, newY)
-    self.x = newX
-    self.y = newY
-    self:draw()
+    gpu.set(
+      self.x,
+      self.y + self.height - 1,
+      string.rep("-", self.width)
+    )
   end
 
   function win:contains(px, py)
-    return px >= self.x
+    return self.visible
+      and not self.minimized
+      and px >= self.x
       and px < self.x + self.width
       and py >= self.y
       and py < self.y + self.height
   end
 
   function win:handleTouch(px, py)
-    if not self.visible or not self:contains(px, py) then
+    if not self:contains(px, py) then
       return false
     end
 
-    if py == self.y and px == self.x + self.width - 2 then
-      self:close()
-      return true
-    end
-
     if py == self.y then
+      if px == self.x + self.width - 2 then
+        self:close()
+        return "close"
+      end
+
+      if px == self.x + self.width - 5 then
+        self:minimize()
+        return "minimize"
+      end
+
       self.dragging = true
       self.dragX = px - self.x
       self.dragY = py - self.y
+
+      return "drag"
     end
 
     return true
@@ -100,13 +106,41 @@ function Window.create(title, x, y, width, height)
 
     self.x = px - self.dragX
     self.y = py - self.dragY
-    self:draw()
 
+    self:draw()
     return true
   end
 
   function win:stopDrag()
     self.dragging = false
+  end
+
+  function win:minimize()
+    self.minimized = true
+    self.dragging = false
+  end
+
+  function win:restore()
+    self.minimized = false
+    self.visible = true
+  end
+
+  function win:close()
+    self.visible = false
+    self.minimized = false
+    self.dragging = false
+  end
+
+  function win:show()
+    self.visible = true
+    self.minimized = false
+    self:draw()
+  end
+
+  function win:move(newX, newY)
+    self.x = newX
+    self.y = newY
+    self:draw()
   end
 
   return win
