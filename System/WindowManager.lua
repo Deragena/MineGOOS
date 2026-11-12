@@ -9,6 +9,18 @@ function WindowManager.add(window)
   table.insert(WindowManager.windows, window)
 end
 
+function WindowManager.remove(window)
+  for i = #WindowManager.windows, 1, -1 do
+    if WindowManager.windows[i] == window then
+      table.remove(WindowManager.windows, i)
+    end
+  end
+
+  if WindowManager.active == window then
+    WindowManager.active = nil
+  end
+end
+
 function WindowManager.draw()
   for _, window in ipairs(WindowManager.windows) do
     if window.visible then
@@ -21,7 +33,7 @@ local function topWindow(x, y)
   for i = #WindowManager.windows, 1, -1 do
     local window = WindowManager.windows[i]
 
-    if window:contains(x, y) then
+    if window.visible and window:contains(x, y) then
       return i, window
     end
   end
@@ -31,9 +43,9 @@ end
 
 function WindowManager.run()
   while true do
-    local e, _, x, y = event.pull()
+    local name, _, x, y = event.pull()
 
-    if e == "touch" then
+    if name == "touch" then
       local index, window = topWindow(x, y)
 
       if window then
@@ -41,23 +53,22 @@ function WindowManager.run()
         table.insert(WindowManager.windows, window)
 
         WindowManager.active = window
+        window:handleTouch(x, y)
 
-        local action = window:onTouch(x, y)
-
-        if action == "close" then
+        if not window.visible then
           WindowManager.active = nil
         end
 
         WindowManager.draw()
       end
 
-    elseif e == "drag" then
+    elseif name == "drag" then
       if WindowManager.active then
-        WindowManager.active:onDrag(x, y)
+        WindowManager.active:handleDrag(x, y)
         WindowManager.draw()
       end
 
-    elseif e == "drop" then
+    elseif name == "drop" then
       if WindowManager.active then
         WindowManager.active:stopDrag()
         WindowManager.active = nil
