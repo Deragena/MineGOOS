@@ -4,11 +4,13 @@ local gpu = component.gpu
 
 local WindowManager = {
   windows = {},
-  active = nil
+  active = nil,
+  desktopDraw = nil
 }
 
 function WindowManager.add(window)
   table.insert(WindowManager.windows, window)
+  WindowManager.active = window
   WindowManager.draw()
 end
 
@@ -41,14 +43,11 @@ local function drawTaskbar()
 
   for _, window in ipairs(WindowManager.windows) do
     if window.visible then
-      local name = window.title:sub(1, 10)
-      local label = "[" .. name .. "]"
+      local label = "[" .. window.title:sub(1, 10) .. "]"
 
-      if window.minimized then
-        gpu.setForeground(0xAAAAAA)
-      else
-        gpu.setForeground(0xFFFFFF)
-      end
+      gpu.setForeground(
+        window.minimized and 0xAAAAAA or 0xFFFFFF
+      )
 
       if x + #label <= w then
         gpu.set(x, h, label)
@@ -65,6 +64,10 @@ function WindowManager.draw()
   gpu.setBackground(0x080612)
   gpu.setForeground(0xFFFFFF)
   gpu.fill(1, 1, w, h, " ")
+
+  if WindowManager.desktopDraw then
+    pcall(WindowManager.desktopDraw)
+  end
 
   for _, window in ipairs(WindowManager.windows) do
     if window.visible and not window.minimized then
@@ -96,7 +99,7 @@ local function taskbarClick(x, y)
 
   local pos = 11
 
-  for _, window in ipairs(WindowManager.windows) do
+  for i, window in ipairs(WindowManager.windows) do
     if window.visible then
       local label = "[" .. window.title:sub(1, 10) .. "]"
 
@@ -105,8 +108,9 @@ local function taskbarClick(x, y)
           window:restore()
         end
 
+        table.remove(WindowManager.windows, i)
+        table.insert(WindowManager.windows, window)
         WindowManager.active = window
-
         return true
       end
 
@@ -117,13 +121,16 @@ local function taskbarClick(x, y)
   return false
 end
 
-function WindowManager.run()
+function WindowManager.run(onDesktopTouch)
   WindowManager.draw()
 
   while true do
-    local name, _, x, y = event.pull()
+    local e = {event.pull()}
+    local name = e[1]
 
     if name == "touch" then
+      local x, y = e[3], e[4]
+
       if taskbarClick(x, y) then
         WindowManager.draw()
       else
@@ -132,7 +139,6 @@ function WindowManager.run()
         if window then
           table.remove(WindowManager.windows, index)
           table.insert(WindowManager.windows, window)
-
           WindowManager.active = window
 
           local action = window:handleTouch(x, y)
@@ -144,12 +150,15 @@ function WindowManager.run()
           end
 
           WindowManager.draw()
+        elseif onDesktopTouch then
+          pcall(onDesktopTouch, x, y)
+          WindowManager.draw()
         end
       end
 
     elseif name == "drag" then
       if WindowManager.active then
-        WindowManager.active:handleDrag(x, y)
+        WindowManager.active:handleDrag(e[3], e[4])
         WindowManager.draw()
       end
 

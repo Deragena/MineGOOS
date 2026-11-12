@@ -8,8 +8,8 @@ function Window.create(title, x, y, width, height)
     title = title or "Window",
     x = x or 2,
     y = y or 2,
-    width = width or 30,
-    height = height or 12,
+    width = width or 34,
+    height = height or 14,
 
     visible = true,
     minimized = false,
@@ -20,50 +20,56 @@ function Window.create(title, x, y, width, height)
 
     background = 0x171326,
     foreground = 0xFFFFFF,
-    titleColor = 0x59328A
+    titleColor = 0x59328A,
+
+    content = nil,
+    onTouch = nil
   }
 
   function win:draw()
-    if not self.visible or self.minimized then return end
+    if not self.visible or self.minimized then
+      return
+    end
 
     local sw, sh = gpu.getResolution()
 
-    self.width = math.min(self.width, sw)
-    self.height = math.min(self.height, sh - 1)
+    self.width = math.max(12, math.min(self.width, sw))
+    self.height = math.max(5, math.min(self.height, sh - 1))
 
     self.x = math.max(1, math.min(self.x, sw - self.width + 1))
     self.y = math.max(1, math.min(self.y, sh - self.height))
 
     gpu.setBackground(self.background)
     gpu.setForeground(self.foreground)
-
-    gpu.fill(
-      self.x,
-      self.y,
-      self.width,
-      self.height,
-      " "
-    )
+    gpu.fill(self.x, self.y, self.width, self.height, " ")
 
     gpu.setBackground(self.titleColor)
     gpu.fill(self.x, self.y, self.width, 1, " ")
 
     gpu.setForeground(0xFFFFFF)
-
-    local title = " " .. self.title
-    gpu.set(self.x, self.y, title:sub(1, self.width - 7))
-
+    gpu.set(self.x + 1, self.y, self.title:sub(1, self.width - 9))
     gpu.set(self.x + self.width - 5, self.y, "_")
     gpu.set(self.x + self.width - 2, self.y, "X")
 
-    gpu.setBackground(self.background)
-    gpu.setForeground(self.foreground)
+    if self.content then
+      gpu.setBackground(self.background)
+      gpu.setForeground(self.foreground)
 
-    gpu.set(
-      self.x,
-      self.y + self.height - 1,
-      string.rep("-", self.width)
-    )
+      local ok, err = pcall(
+        self.content,
+        self,
+        self.x + 1,
+        self.y + 2,
+        self.width - 2,
+        self.height - 3
+      )
+
+      if not ok then
+        gpu.setForeground(0xFF6666)
+        gpu.set(self.x + 1, self.y + 2, "App error:")
+        gpu.set(self.x + 1, self.y + 3, tostring(err):sub(1, self.width - 3))
+      end
+    end
   end
 
   function win:contains(px, py)
@@ -94,20 +100,32 @@ function Window.create(title, x, y, width, height)
       self.dragging = true
       self.dragX = px - self.x
       self.dragY = py - self.y
-
       return "drag"
+    end
+
+    if self.onTouch then
+      local ok, result = pcall(
+        self.onTouch,
+        self,
+        px - self.x - 1,
+        py - self.y - 2
+      )
+
+      if ok then
+        return result
+      end
     end
 
     return true
   end
 
   function win:handleDrag(px, py)
-    if not self.dragging then return false end
+    if not self.dragging then
+      return false
+    end
 
     self.x = px - self.dragX
     self.y = py - self.dragY
-
-    self:draw()
     return true
   end
 
@@ -134,13 +152,11 @@ function Window.create(title, x, y, width, height)
   function win:show()
     self.visible = true
     self.minimized = false
-    self:draw()
   end
 
   function win:move(newX, newY)
     self.x = newX
     self.y = newY
-    self:draw()
   end
 
   return win
